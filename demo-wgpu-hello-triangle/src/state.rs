@@ -26,9 +26,31 @@ impl Vertex {
 }
 
 const VERTICES: &[Vertex] = &[
-    Vertex { position: [-0.5, -0.5, 0.0] },
-    Vertex { position: [ 0.5, -0.5, 0.0] },
-    Vertex { position: [ 0.0,  0.5, 0.0] }
+    // Center point
+    Vertex { position: [0.0, 0.0, 0.0] },
+    // 10 points around the circle (radius = 0.5)
+    Vertex { position: [0.5, 0.0, 0.0] },
+    Vertex { position: [0.4045, 0.2939, 0.0] },
+    Vertex { position: [0.1545, 0.4755, 0.0] },
+    Vertex { position: [-0.1545, 0.4755, 0.0] },
+    Vertex { position: [-0.4045, 0.2939, 0.0] },
+    Vertex { position: [-0.5, 0.0, 0.0] },
+    Vertex { position: [-0.4045, -0.2939, 0.0] },
+    Vertex { position: [-0.1545, -0.4755, 0.0] },
+    Vertex { position: [0.1545, -0.4755, 0.0] },
+    Vertex { position: [0.4045, -0.2939, 0.0] },
+];
+const INDICES: &[u16] = &[
+    0, 1, 2,
+    0, 2, 3,
+    0, 3, 4,
+    0, 4, 5,
+    0, 5, 6,
+    0, 6, 7,
+    0, 7, 8,
+    0, 8, 9,
+    0, 9, 10,
+    0, 10, 1,
 ];
 
 pub struct State {
@@ -39,6 +61,8 @@ pub struct State {
     pub size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
+    num_indices: u32,
     pub window: Window,
 }
 
@@ -92,6 +116,12 @@ impl State {
                 usage: wgpu::BufferUsages::VERTEX,
             }
         );
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+        let num_indices = INDICES.len() as u32;
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
@@ -132,6 +162,8 @@ impl State {
             size,
             render_pipeline,
             vertex_buffer,
+            index_buffer,
+            num_indices
         }
     }
 
@@ -175,7 +207,9 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            
         }
         self.queue.submit(iter::once(encoder.finish()));
         output_frame.present();
